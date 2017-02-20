@@ -1,0 +1,199 @@
+参考:
+http://www.jb51.net/os/188488.html
+
+1.配置 YUM (安装环境的工具包)
+命令如下:  # 后边都是注释
+
+备份原 CentOS-Base.repo 
+sudo mv /etc/yum.repos.d/CentOS-Base.repo /etc/yum.repos.d/CentOS-Base.repo.bak
+
+# 编辑   文件 （修改 CentOS-Base.repo）
+vi /etc/yum.repos.d/CentOS-Base.repo
+
+# i 进入插入模式
+拷贝  从 https://mirrors.tuna.tsinghua.edu.cn/help/centos/ 页面 复制的内容
+
+ESC :wq 回车
+# 保存 刚才写入的内容 w=write  q=quit  
+
+更新软件包缓存
+sudo yum makecache
+
+2.安装LAMP   一键自动部署环境的工具，请参见网友开发的这个工具
+http://www.centos.bz/2013/08/ezhttp-tutorial/
+
+
+# 安装apache:
+yum install httpd
+# 启动apache:
+# centos 7
+systemctl start httpd.service
+#设置apache开机启动
+systemctl enable httpd.service 
+# centos 6
+service start httpd
+
+#  安装mysql:
+yum install -y mariadb mariadb-server
+
+# 启动停止mysql相关命令:
+systemctl start mariadb  #启动MariaDB
+systemctl stop mariadb  #停止MariaDB
+systemctl restart mariadb  #重启MariaDB
+systemctl enable mariadb  #设置开机启动
+
+# 重置密码
+use mysql;
+set password for 'root'@'localhost' =password('password');
+
+ 
+# 安装php
+yum install php
+# 重启apache使php生效
+# centos 7
+systemctl restart httpd.service
+# centos 6
+service restart httpd
+
+# 安装php的扩展
+yum install php-mysql php-gd php-imap php-ldap php-odbc php-pear php-xml php-xmlrpc
+# 安装完扩展之后需要再次重启apache
+# centos 7
+systemctl restart httpd.service
+# centos 6
+service restart httpd
+
+此时可以在目录：/var/www/html/下建立一个PHP文件
+代码：
+<?php phpinfo(); ?>
+然后访问这个文件，就能看到PHP的一些信息，php.ini配置文件的路径可以在这个页面上看到
+
+
+3.配置防火墙和SELINUX 
+参考: http://blog.csdn.net/u013035314/article/details/46683547
+
+# cetnos7 关闭防火墙  否则apache服务开启之后,一样无法访问
+# 关闭防火墙：
+sudo systemctl stop firewalld.service
+# 关闭防火墙开机启动：
+sudo systemctl disable firewalld.service
+
+# centos6 
+service iptables stop 
+
+
+# 关闭SELINUX   CentOS7 特性, apache用户创建文件夹权限相关
+
+# 编辑  selinux 文件   
+vi /etc/selinux/config
+
+# 找到以下几行 分别注释(行开头添加 # 就注释了) 和新增
+#SELINUX=enforcing #注释掉
+#SELINUXTYPE=targeted #注释掉
+SELINUX=disabled #增加
+
+#保存并退出
+ESC :wq 回车 
+
+#使配置立即生效, 否则需要重启
+setenforce 0 
+
+#################################################
+问题记录
+
+
+修改所属用户,
+chown -R apache:apache /var/www/html/
+修改权限,
+chmod -R 777 /var/www/html/
+SELINNUX -> 7.0 
+
+配置yum和安装 apache,mysql,php 使用root用户
+su root 是切换到root用户
+
+
+ecshop 失败 ->  
+1. ec_v1 数据库选择失败 -> 删除 data/install.lock
+2.安装失败 -> 修改php.ini -> time_zone = GMT
+
+修改配置 -> 用FTP工具来完成 (工具连接的时候使用root)
+在线编辑 ->  需要在本地选择好对应后缀的打开应用程序
+比如 php.ini 选择使用 vscode打开
+
+编辑完之后根据提示 上传修改过的配置文件
+
+
+
+参考:
+http://www.cnblogs.com/cnblogsfans/archive/2009/09/21/1570942.html
+==> root 用户可以远程访问
+
+ssh 远程访问服务成功后, mysql -u root -p 访问数据库
+输入以下两行命令
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY '123456' WITH GRANT OPTION;
+FLUSH PRIVILEGES;
+
+# 设置任何主机  都可以通过 root + 123456 访问服务器数据库 => 实际中慎用 不安全
+
+==> 使用其他服务器上的数据库
+在项目配置中设置  数据库服务器的地址和帐号密码
+
+linux => 测试部署   微信  linux 实际做测试
+
+本地代码,本地的测试数据(测试环境,开发)  => 开发完成,测试完成 => FTP上传代码文件到服务器  => 基础数据导入到服务器 => 访问服务器(正式环境,生产)
+
+
+项目 -> 部署到服务器上  (TP3  TP5  youbbs  cms ecshop)
+
+
+
+
+yum 安装的都不需要修改配置
+apache工作目录： /var/www/html
+apache配置：  /ect/httpd/conf   
+php配置：    /ect/php.ini 
+            错误 缓存 报错 日期 扩展（基本不改，手动安装的）   
+            错误报告
+            error_reporting = E_ALL ( Development Value: E_ALL )
+
+            缓存关掉
+            opcache.enable=0
+
+            显示错误信息
+            display_errors = On
+            
+            日期设置信息
+            date.timezone = "Asia/Shanghai"   （GMT 世界时）
+            
+            扩展（基本不改，手动安装的）
+
+
+
+// ------------ php.ini 常用 ----------------
+// Development Value
+// Production Value
+    // 是否显示错误 display_errors
+    // 错误报告规则 error_reporting
+
+    // 是否缓存     opcache.enable
+    // 超时时间     default_socket_timeout,mysql.connect_timeout
+
+    // 是否允许文件上传         file_uploads
+    // 文件大小限制            upload_max_filesize
+    // 文件上传个数            max_file_uploads
+    // 表单请求POST最大限制    post_max_size
+
+    //----- 扩展 
+    // cookie session 
+    // 生命周期             session.gc_maxlifetime
+    // 自动开启 不建议开启   session.auto_start
+    // 基于cookie实现的session cookie中sessionid 的key是什么   session.name
+    // 启动的扩展  
+    // 扩展库所在的目录  extension_dir
+    // mbsting  pdo gd2 mysqli curl 
+
+    // 不确定的时候,找这个
+    phpinfo();
+
+
+
